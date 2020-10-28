@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+# !/usr/bin/env python
+import urllib
+import urllib.parse
+import urllib.request
+import base64
+import json
+import os
+import time
+
+# 获取开始时间
+start = time.time()
+
+# client_id 为官网获取的AK， client_secret 为官网获取的SK
+client_id = 'SUjpOZAvOqU85MmSG4V3OnDd'
+client_secret = 'DZ5ZhNOzRmmMH98hy8qwI5ljWDmu2N2'
+
+
+# 获取token
+def get_token():
+    host = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+    request = urllib.request.Request(host)
+    request.add_header('Content-Type', 'application/json; charset=UTF-8')
+    response = urllib.request.urlopen(request)
+    token_content = response.read()
+    if token_content:
+        token_info = json.loads(token_content.decode("utf-8"))
+        token_key = token_info['access_token']
+    return token_key
+
+""" 读取图片 """
+def get_file_content(filePath):
+    print(filePath)
+    with open(filePath, 'rb') as fp:
+        return fp.read()
+
+# 图片路径
+img_path = r"D:\python\jk"
+options = {}
+# 遍历所有文件（使用 os.walk 方法）
+for root, dirs, files in os.walk(img_path):
+    for file in files:
+        # 使用join函数将文件名称和文件所在根目录连接起来
+        file_dir = os.path.join(root, file)
+        # 判断是否是图片
+        if file_dir[-4:] == ".png" or file_dir[-4:] == ".jpg":
+            # 传入图片
+            image = get_file_content(file_dir)
+            #print(file)
+            request_url = "https://aip.baidubce.com/rest/2.0/ocr/v1/vat_invoice"
+            # 二进制方式打开图片文件
+            f = open(file_dir, 'rb')
+            img = base64.b64encode(f.read())
+            params = dict()
+            params['image'] = img
+            params['show'] = 'true'
+            params = urllib.parse.urlencode(params).encode("utf-8")
+            # params = json.dumps(params).encode('utf-8')
+            access_token = get_token()
+            request_url = request_url + "?access_token=" + access_token
+            request = urllib.request.Request(url=request_url, data=params)
+            request.add_header('Content-Type', 'application/x-www-form-urlencoded')
+            response = urllib.request.urlopen(request)
+            content = response.read()
+            f.close()
+            if content:
+                # print(content)
+                content = content.decode('utf-8')
+                # print(content)
+                data = json.loads(content)
+                # print(data)
+                words_result = data['words_result']
+                print('发票号码:', words_result['InvoiceNum'])
+                print('开票日期:', words_result['InvoiceDate'])
+                print('合计金额:', words_result['TotalAmount'])
+                print('合计税额:', words_result['TotalTax'])
+                print('销售方名称:', words_result['SellerName'])
+                print('销售方纳税人识别号:', words_result['SellerRegisterNum'])
+                print('购方名称:', words_result['PurchaserName'])
+                print('购方纳税人识别号:', words_result['PurchaserRegisterNum'])
+                #time.sleep(5)
+                #ret = words_result.get("InvoiceNum")
+               # print(words_result)
+                #ret = words_result.get("InvoiceNum")
+               # print(ret)
+
+                os.rename(file_dir, (str(words_result['InvoiceNum'] + '.jpg')))  # """识别发票号码改名字"""
+
+end = time.time()
+print('Running time: %1.2f Seconds' % (end - start))
