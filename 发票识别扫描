@@ -35,7 +35,7 @@ def get_file_content(filePath):
         return fp.read()
 
 # 图片路径
-img_path = r"D:\python\jk"
+img_path = r"D:\python\jjk"
 options = {}
 # 遍历所有文件（使用 os.walk 方法）
 for root, dirs, files in os.walk(img_path):
